@@ -1,10 +1,16 @@
 import sys
 from time import sleep
+import os
 import json
 
 import pygame
 from bullet import Bullet
 from tiefighter import TieFighter
+
+pygame.mixer.init()
+
+s = 'sounds'
+shot = pygame.mixer.Sound(os.path.join(s, 'gunshot.ogg'))
 
 
 def check_keydown_events(event, ai_settings, screen, ship, bullets):
@@ -14,6 +20,7 @@ def check_keydown_events(event, ai_settings, screen, ship, bullets):
     elif event.key == pygame.K_LEFT:
         ship.moving_left = True
     elif event.key == pygame.K_SPACE:
+        pygame.mixer.Sound.play(shot)
         fire_bullet(ai_settings, screen, ship, bullets)
     elif event.key == pygame.K_q:
         sys.exit()
