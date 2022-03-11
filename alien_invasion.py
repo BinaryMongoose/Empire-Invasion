@@ -22,27 +22,28 @@ def runGame():
     # Create an instance to store game stats and create a scoreboard
     stats = GameStats(ai_settings)
     with open("high_score.json") as f_obj:
-        stats.high_score = json.load(f_obj
-                                     )
+        stats.high_score = json.load(f_obj)
+
     sb = Scoreboard(ai_settings, screen, stats)
 
     # Make a ship, a group of bullets, and a group of tieFighters.
     ship = Ship(ai_settings, screen)
     bullets = Group()
-    aliens = Group()
+    tieFighterBullets = Group()
+    tieFighters = Group()
 
-    gf.create_fleet(ai_settings, screen, ship, aliens)
+    gf.create_fleet(ai_settings, screen, ship, tieFighters)
 
     # Start the main loop for the game.
     while True:
-        gf.check_events(ai_settings, screen, stats, sb, play_button, ship, aliens, bullets)
+        gf.check_events(ai_settings, screen, stats, sb, play_button, ship, tieFighters, bullets)
 
         if stats.game_active:
             ship.update()
-            gf.update_bullets(ai_settings, screen, stats, sb, ship, aliens, bullets)
-            gf.update_tie_fighters(ai_settings, screen, stats, sb, ship, aliens, bullets)
+            gf.update_bullets(ai_settings, screen, stats, sb, ship, tieFighters, bullets, tieFighterBullets)
+            gf.update_tie_fighters(ai_settings, screen, stats, sb, ship, tieFighters, bullets, tieFighterBullets)
 
-        gf.update_screen(ai_settings, screen, stats, sb, ship, aliens, bullets, play_button)
+        gf.update_screen(ai_settings, screen, stats, sb, ship, tieFighters, bullets, tieFighterBullets, play_button)
 
 
 runGame()

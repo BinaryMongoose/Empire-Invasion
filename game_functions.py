@@ -21,7 +21,7 @@ def check_keydown_events(event, ai_settings, screen, ship, bullets):
         ship.moving_left = True
     elif event.key == pygame.K_SPACE:
         pygame.mixer.Sound.play(shot)
-        fire_bullet(ai_settings, screen, ship, bullets)
+        fire_ship_bullet(ai_settings, screen, ship, bullets)
     elif event.key == pygame.K_q:
         sys.exit()
 
@@ -82,7 +82,7 @@ def check_play_button(ai_settings, screen, stats, sb, play_button, ship, tieFigh
         create_fleet(ai_settings, screen, ship, tieFighters)
 
 
-def update_screen(ai_settings, screen, stats, sb, ship, tieFighters, bullets, play_button):
+def update_screen(ai_settings, screen, stats, sb, ship, tieFighters, bullets, tieFighterBullets, play_button):
     # Redraw the screen during each pass
     screen.fill(ai_settings.bg_color)
     draw_background(screen)
@@ -90,6 +90,9 @@ def update_screen(ai_settings, screen, stats, sb, ship, tieFighters, bullets, pl
     # Redraw all bullets behind ships and tieFighters
     for bullet in bullets.sprites():
         bullet.draw_bullet()
+
+    for tieFighterBullet in tieFighterBullets.sprites():
+        tieFighterBullet.draw_bullet()
 
     ship.blitme()
     tieFighters.draw(screen)
@@ -119,43 +122,64 @@ def draw_background(screen):
         rect.y += image_size
 
 
-def fire_bullet(ai_settings, screen, ship, bullets):
-    """Fire a bullet if limit is not reached yet."""
-    # Create a new bullet and add it to the bullets group
+def fire_tieFighter_bullet(ai_settings, screen, tieFighter, tieFighterBullets):
+    fire_bullet(ai_settings, screen, tieFighter, tieFighterBullets)
+
+
+def fire_ship_bullet(ai_settings, screen, ship, bullets):
     if len(bullets) < ai_settings.bullets_allowed:
-        new_bullet = Bullet(ai_settings, screen, ship)
-        bullets.add(new_bullet)
+        fire_bullet(ai_settings, screen, ship, bullets)
 
 
-def update_bullets(ai_settings, screen, stats, sb, ship, tieFighters, bullets):
+def fire_bullet(ai_settings, screen, sprite, bullets):
+    # Create a new bullet and add it to the bullets group
+    new_bullet = Bullet(ai_settings, screen, sprite)
+    bullets.add(new_bullet)
+
+
+def update_bullets(ai_settings, screen, stats, sb, ship, tieFighters, bullets, tieFighterBullets):
     """Update position of bullets and get rid of old bullets."""
-    bullets.update()
+    bullets.update(False)
+    tieFighterBullets.update(True)
 
     # Get rid of old bullets that have disappeared
     for bullet in bullets.copy():
         if bullet.rect.bottom <= 0:
             bullets.remove(bullet)
 
+    for bullet in tieFighterBullets.copy():
+        if bullet.rect.bottom >= ai_settings.screen_height:
+            tieFighterBullets.remove(bullet)
+
     # Check if any bullets have hit tieFighters.
     # If so, get rid of the bullet and tieFighters
-    collisions = pygame.sprite.groupcollide(bullets, tieFighters, True, True)
+    ship_tieFighter_collisions = pygame.sprite.groupcollide(bullets, tieFighters, True, True)
 
-    if collisions:
-        for tieFighters in collisions.values():
+    ship_is_hit = pygame.sprite.spritecollide(ship, tieFighterBullets, False)
+
+    if ship_tieFighter_collisions:
+        for tieFighters in ship_tieFighter_collisions.values():
             # noinspection PyTypeChecker
             stats.score += ai_settings.alien_points * len(tieFighters)
             sb.prep_score()
         check_high_score(stats, sb)
 
-    if len(tieFighters) == 0:
-        # If entre fleet is destroyed, start a new level
-        bullets.empty()
-        ai_settings.increase_speed()
+    if ship_is_hit:
+        ship_hit(ai_settings, screen, stats, sb, ship, tieFighters, bullets)
 
-        # Increase level
-        stats.level += 1
-        sb.prep_level()
-        create_fleet(ai_settings, screen, ship, tieFighters)
+    if len(tieFighters) == 0:
+        new_level(ai_settings, screen, stats, sb, ship, tieFighters, bullets)
+
+
+def new_level(ai_settings, screen, stats, sb, ship, tieFighters, bullets):
+    # If entre fleet is destroyed, start a new level
+    bullets.empty()
+    ai_settings.increase_speed()
+
+    # Increase level
+    stats.level += 1
+    sb.prep_level()
+    create_fleet(ai_settings, screen, ship, tieFighters)
 
 
 def get_number_rows(ai_settings, ship_height, alien_height):
@@ -196,11 +220,12 @@ def create_fleet(ai_settings, screen, ship, tieFighters):
             create_tieFighter(ai_settings, screen, tieFighters, tieFighter_number, row_number)
 
 
-def check_fleet_edges(ai_settings, aliens):
+def check_fleet_edges(ai_settings, tieFighters, screen, tieFighterBullets):
     """Respond appropriately if any tieFighters have reached the edge."""
-    for alien in aliens.sprites():
-        if alien.check_edges():
-            change_fleet_direction(ai_settings, aliens)
+    for tieFighter in tieFighters.sprites():
+        if tieFighter.check_edges():
+            change_fleet_direction(ai_settings, tieFighters)
+            fire_tieFighter_bullet(ai_settings, screen, tieFighter, tieFighterBullets)
             break
 
 
@@ -245,19 +270,19 @@ def check_tie_fighters_bottom(ai_settings, screen, stats, sb, ship, aliens, bull
             break
 
 
-def update_tie_fighters(ai_settings, screen, stats, sb, ship, aliens, bullets):
+def update_tie_fighters(ai_settings, screen, stats, sb, ship, tieFighters, bullets, tieFighterBullets):
     """
     Check if the fleet is at an edge,
        and then update the positions of all tieFighters in the fleet.
     """
-    check_fleet_edges(ai_settings, aliens)
-    aliens.update()
+    check_fleet_edges(ai_settings, tieFighters, screen, tieFighterBullets)
+    tieFighters.update()
 
     # Look for alien-ship collisions
-    if pygame.sprite.spritecollideany(ship, aliens):
-        ship_hit(ai_settings, screen, stats, sb, ship, aliens, bullets)
+    if pygame.sprite.spritecollideany(ship, tieFighters):
+        ship_hit(ai_settings, screen, stats, sb, ship, tieFighters, bullets)
 
-    check_tie_fighters_bottom(ai_settings, screen, stats, sb, ship, aliens, bullets)
+    check_tie_fighters_bottom(ai_settings, screen, stats, sb, ship, tieFighters, bullets)
 
 
 def check_high_score(stats, sb):

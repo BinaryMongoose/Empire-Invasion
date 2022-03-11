@@ -2,6 +2,7 @@
 import json
 
 
+# noinspection PyAttributeOutsideInit
 class Settings:
     """A class to store all settings for TieFighter Invasion."""
 
