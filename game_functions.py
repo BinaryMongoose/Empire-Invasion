@@ -2,6 +2,7 @@ import sys
 from time import sleep
 import os
 import json
+from random import randint
 
 import pygame
 from bullet import Bullet
@@ -20,7 +21,7 @@ def check_keydown_events(event, ai_settings, screen, ship, bullets):
     elif event.key == pygame.K_LEFT:
         ship.moving_left = True
     elif event.key == pygame.K_SPACE:
-        pygame.mixer.Sound.play(shot)
+        # pygame.mixer.Sound.play(shot)
         fire_ship_bullet(ai_settings, screen, ship, bullets)
     elif event.key == pygame.K_q:
         sys.exit()
@@ -122,8 +123,10 @@ def draw_background(screen):
         rect.y += image_size
 
 
-def fire_tieFighter_bullet(ai_settings, screen, tieFighter, tieFighterBullets):
-    fire_bullet(ai_settings, screen, tieFighter, tieFighterBullets)
+def fire_tieFighter_bullet(ai_settings, screen, tieFighter, tieFighters, tieFighterBullets):
+    if randint(0, len(tieFighters)) == randint(0, len(tieFighters)):
+        if len(tieFighterBullets) < ai_settings.bullets_allowed:
+            fire_bullet(ai_settings, screen, tieFighter, tieFighterBullets)
 
 
 def fire_ship_bullet(ai_settings, screen, ship, bullets):
@@ -165,15 +168,16 @@ def update_bullets(ai_settings, screen, stats, sb, ship, tieFighters, bullets, t
         check_high_score(stats, sb)
 
     if ship_is_hit:
-        ship_hit(ai_settings, screen, stats, sb, ship, tieFighters, bullets)
+        ship_hit(ai_settings, screen, stats, sb, ship, tieFighters, bullets, tieFighterBullets)
 
     if len(tieFighters) == 0:
-        new_level(ai_settings, screen, stats, sb, ship, tieFighters, bullets)
+        new_level(ai_settings, screen, stats, sb, ship, tieFighters, bullets, tieFighterBullets)
 
 
-def new_level(ai_settings, screen, stats, sb, ship, tieFighters, bullets):
+def new_level(ai_settings, screen, stats, sb, ship, tieFighters, bullets, tieFighterBullets):
     # If entre fleet is destroyed, start a new level
     bullets.empty()
+    tieFighterBullets.empty()
     ai_settings.increase_speed()
 
     # Increase level
@@ -225,7 +229,6 @@ def check_fleet_edges(ai_settings, tieFighters, screen, tieFighterBullets):
     for tieFighter in tieFighters.sprites():
         if tieFighter.check_edges():
             change_fleet_direction(ai_settings, tieFighters)
-            fire_tieFighter_bullet(ai_settings, screen, tieFighter, tieFighterBullets)
             break
 
 
@@ -236,7 +239,7 @@ def change_fleet_direction(ai_settings, aliens):
     ai_settings.fleet_direction *= -1
 
 
-def ship_hit(ai_settings, screen, stats, sb, ship, aliens, bullets):
+def ship_hit(ai_settings, screen, stats, sb, ship, aliens, bullets, tieFighterBullets):
     """Respond to ship being hit by Tie-Fighter"""
     if stats.ships_left > 0:
         # Decrement ships left.
@@ -248,6 +251,7 @@ def ship_hit(ai_settings, screen, stats, sb, ship, aliens, bullets):
         # Empty the list of tieFighters and bullets.
         aliens.empty()
         bullets.empty()
+        tieFighterBullets.empty()
 
         # Create a new fleet and center the ship
         create_fleet(ai_settings, screen, ship, aliens)
@@ -260,17 +264,17 @@ def ship_hit(ai_settings, screen, stats, sb, ship, aliens, bullets):
         pygame.mouse.set_visible(True)
 
 
-def check_tie_fighters_bottom(ai_settings, screen, stats, sb, ship, aliens, bullets):
+def check_tie_fighters_bottom(ai_settings, screen, stats, sb, ship, tieFighters, bullets, tieFighterBullets):
     """Check if any tieFighters have gotten to the bottom of the screen."""
     screen_rect = screen.get_rect()
-    for alien in aliens:
+    for alien in tieFighters:
         if alien.rect.bottom >= screen_rect.bottom:
             # Treat this as if the ship was hit
-            ship_hit(ai_settings, screen, stats, sb, ship, aliens, bullets)
+            ship_hit(ai_settings, screen, stats, sb, ship, tieFighters, bullets, tieFighterBullets)
             break
 
 
-def update_tie_fighters(ai_settings, screen, stats, sb, ship, tieFighters, bullets, tieFighterBullets):
+def update_tieFighters(ai_settings, screen, stats, sb, ship, tieFighters, bullets, tieFighterBullets):
     """
     Check if the fleet is at an edge,
        and then update the positions of all tieFighters in the fleet.
@@ -278,11 +282,14 @@ def update_tie_fighters(ai_settings, screen, stats, sb, ship, tieFighters, bulle
     check_fleet_edges(ai_settings, tieFighters, screen, tieFighterBullets)
     tieFighters.update()
 
+    for tieFighter in tieFighters:
+        fire_tieFighter_bullet(ai_settings, screen, tieFighter, tieFighters, tieFighterBullets)
+
     # Look for alien-ship collisions
     if pygame.sprite.spritecollideany(ship, tieFighters):
-        ship_hit(ai_settings, screen, stats, sb, ship, tieFighters, bullets)
+        ship_hit(ai_settings, screen, stats, sb, ship, tieFighters, bullets, tieFighterBullets)
 
-    check_tie_fighters_bottom(ai_settings, screen, stats, sb, ship, tieFighters, bullets)
+    check_tie_fighters_bottom(ai_settings, screen, stats, sb, ship, tieFighters, bullets, tieFighterBullets)
 
 
 def check_high_score(stats, sb):

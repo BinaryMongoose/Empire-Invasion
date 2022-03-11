@@ -41,7 +41,7 @@ def runGame():
         if stats.game_active:
             ship.update()
             gf.update_bullets(ai_settings, screen, stats, sb, ship, tieFighters, bullets, tieFighterBullets)
-            gf.update_tie_fighters(ai_settings, screen, stats, sb, ship, tieFighters, bullets, tieFighterBullets)
+            gf.update_tieFighters(ai_settings, screen, stats, sb, ship, tieFighters, bullets, tieFighterBullets)
 
         gf.update_screen(ai_settings, screen, stats, sb, ship, tieFighters, bullets, tieFighterBullets, play_button)
 
