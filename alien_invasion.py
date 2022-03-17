@@ -35,6 +35,7 @@ def runGame():
     gf.create_fleet(ai_settings, screen, ship, tieFighters)
 
     # Start the main loop for the game.
+    start_time = pygame.time.get_ticks()
     while True:
         gf.check_events(ai_settings, screen, stats, sb, play_button, ship, tieFighters, bullets)
 
@@ -43,7 +44,10 @@ def runGame():
             gf.update_bullets(ai_settings, screen, stats, sb, ship, tieFighters, bullets, tieFighterBullets)
             gf.update_tieFighters(ai_settings, screen, stats, sb, ship, tieFighters, bullets, tieFighterBullets)
 
-        gf.update_screen(ai_settings, screen, stats, sb, ship, tieFighters, bullets, tieFighterBullets, play_button)
+        end_time = pygame.time.get_ticks()
+        delta_time = end_time - start_time
+        start_time = end_time
+        gf.update_screen(ai_settings, screen, stats, sb, ship, tieFighters, bullets, tieFighterBullets, play_button, delta_time)
 
 
 runGame()

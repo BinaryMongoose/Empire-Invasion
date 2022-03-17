@@ -83,10 +83,10 @@ def check_play_button(ai_settings, screen, stats, sb, play_button, ship, tieFigh
         create_fleet(ai_settings, screen, ship, tieFighters)
 
 
-def update_screen(ai_settings, screen, stats, sb, ship, tieFighters, bullets, tieFighterBullets, play_button):
+def update_screen(ai_settings, screen, stats, sb, ship, tieFighters, bullets, tieFighterBullets, play_button, delta_time_ms):
     # Redraw the screen during each pass
     screen.fill(ai_settings.bg_color)
-    draw_background(screen)
+    draw_background(screen, delta_time_ms)
 
     # Redraw all bullets behind ships and tieFighters
     for bullet in bullets.sprites():
@@ -109,24 +109,55 @@ def update_screen(ai_settings, screen, stats, sb, ship, tieFighters, bullets, ti
     # Make the most recently drawn screen visible.
     pygame.display.flip()
 
+scroll_y = 0.0
 
-def draw_background(screen):
+def draw_background(screen, delta_time_ms):
+    global scroll_y
+
     image = pygame.image.load("images/Background.bmp")
     rect = image.get_rect()
-    image_size = 200
 
-    for i in range(0, 4):
-        for j in range(0, 6):
+    scroll_rate = 100.0 # Pixels per second
+    scroll_y += scroll_rate * (delta_time_ms / 1000.0)
+    if scroll_y >= screen.get_height():
+        scroll_y -= screen.get_height()
+
+    rect.y -= scroll_y
+
+    for i in range(0, int((screen.get_height() + scroll_y) / rect.height) + 1):
+        for j in range(0, int(screen.get_width() / rect.width)):
             screen.blit(image, rect)
-            rect.x += image_size
+            rect.x += rect.width
         rect.x = 0
-        rect.y += image_size
+        rect.y += rect.height
+
+tie_fighter_bullet_times = list()
+max_fire_rate = 1.0 # Bullets per second
+
+def tieFighter_fire_rate():
+    global tie_fighter_bullet_times
+
+    # First remove bullets older than our time cut-off
+    max_time_in_past = 5.0 # Number of seconds in the past to cut off
+    curr_time = pygame.time.get_ticks()
+    cutoff_time = curr_time - (max_time_in_past * 1000.0)
+    oldest_time = min(tie_fighter_bullet_times, default=curr_time)
+    tie_fighter_bullet_times = list(filter(lambda x: x >= cutoff_time, tie_fighter_bullet_times))
+
+    # Find the oldest bullet remaining
+    if curr_time - oldest_time == 0:
+        return 0
+    
+    result = len(tie_fighter_bullet_times) / ((curr_time - oldest_time) / 1000.0)
+
+    return result
 
 
 def fire_tieFighter_bullet(ai_settings, screen, tieFighter, tieFighters, tieFighterBullets):
     if randint(0, len(tieFighters)) == randint(0, len(tieFighters)):
-        if len(tieFighterBullets) < ai_settings.bullets_allowed:
-            fire_bullet(ai_settings, screen, tieFighter, tieFighterBullets)
+        #if len(tieFighterBullets) < ai_settings.bullets_allowed:
+        tie_fighter_bullet_times.append(pygame.time.get_ticks())
+        fire_bullet(ai_settings, screen, tieFighter, tieFighterBullets)
 
 
 def fire_ship_bullet(ai_settings, screen, ship, bullets):
@@ -283,7 +314,10 @@ def update_tieFighters(ai_settings, screen, stats, sb, ship, tieFighters, bullet
     tieFighters.update()
 
     for tieFighter in tieFighters:
-        fire_tieFighter_bullet(ai_settings, screen, tieFighter, tieFighters, tieFighterBullets)
+        if tieFighter_fire_rate() < ai_settings.enemy_fire_rate:
+            fire_tieFighter_bullet(ai_settings, screen, tieFighter, tieFighters, tieFighterBullets)
+        else:
+            break
 
     # Look for alien-ship collisions
     if pygame.sprite.spritecollideany(ship, tieFighters):
